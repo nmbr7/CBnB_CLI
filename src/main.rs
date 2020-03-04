@@ -29,31 +29,49 @@ fn main() {
             	(author: "nmbr_7")
             )
             )
-(@subcommand fas =>
+(@subcommand faas =>
             (about: "subcommand to deploy your functions")
             (version: "0.1.0")
             (author: "nmbr_7")
+            (@subcommand create =>
+            	(about: "list all the files")
+            	(version: "0.1.0")
+            	(author: "nmbr_7")
+                (@arg file: -f --file +takes_value "file to be stored")
+            )
+            (@subcommand update =>
+            	(about: "list all the files")
+            	(version: "0.1.0")
+            	(author: "nmbr_7")
+                (@arg id: -id --identifier +takes_value "function id")
+            )
+            (@subcommand delete =>
+            	(about: "list all the files")
+            	(version: "0.1.0")
+            	(author: "nmbr_7")
+                (@arg id: -id --identifier +takes_value "function id")
+                (@arg file: -f --file +takes_value "file to be stored")
+            )
+            (@subcommand publish =>
+            	(about: "list all the files")
+            	(version: "0.1.0")
+            	(author: "nmbr_7")
+                (@arg id: -id --identifier +takes_value "function id")
+            )
         )
     )
     .get_matches();
 
-    match matches.subcommand_name() {
-        Some("vm") => println!("Request you remote vm"),
-        Some("docker") => println!("Deploy your docker machine"),
-        Some("storage") => println!("Cbnb Storage at your service"),
-        Some("fas") => println!("Deploy your Functions now"),
+    match matches.subcommand() {
+        ("vm", Some(vm_matches)) => println!("Request you remote vm"),
+        ("docker", Some(docker_matches)) => println!("Deploy your docker machine"),
+        ("storage", Some(storage_matches)) => println!("Cbnb Storage at your service"),
+
+        ("faas", Some(faas_matches)) => {
+            println!("Deploy your Functions now");
+            //TODO Use the rsless library
+        }
+
         _ => println!("No valid subcommand was used"),
     };
-
-    /*if let Some(matches) = matches.subcommand_matches("test") {
-        if matches.is_present("verbose") {
-            println!("Printing verbosely...");
-        } else {
-            println!("Printing normally...");
-        }
-    }
-
-    if let Some(o) = matches.value_of("i") {
-        println!("Value for output: {}", o);
-    }*/
 }
