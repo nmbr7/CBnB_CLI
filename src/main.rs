@@ -5,10 +5,11 @@ extern crate walkdir;
 use serde_json::{json, Value};
 use std::fs::File;
 use std::io::prelude::*;
+use std::io::SeekFrom;
 use std::net::TcpListener;
 use std::net::TcpStream;
+use std::process::Command;
 use walkdir::WalkDir;
-
 mod message;
 
 use message::{Message, ServiceMessage, ServiceMsgType, ServiceType};
@@ -46,13 +47,6 @@ fn main() {
         (author: "nmbr_7")
         (about: "CloudBnB Service CLI")
         (@arg connect: -c --connect +takes_value +required "destination addr and port")
-        (@subcommand vm =>
-            (about: "Subcommand to request remote virtual machines")
-            (version: "0.1.0")
-            (author: "nmbr_7")
-            (@arg ram: -r --ram +required +takes_value "Give the amount of required ram x(Mb/Gb)")
-            (@arg cpu_cores: -c --cpu_cores +required +takes_value  "Give cpu core count")
-        )
 (@subcommand docker =>
             (about: "Subcommand to deploy a  docker machines")
             (version: "0.1.0")
@@ -62,12 +56,6 @@ fn main() {
             (about: "Subcommand to use Cbnb storage solutions")
             (version: "0.1.0")
             (author: "nmbr_7")
-            (@arg file: -f --file +required +takes_value "file to be stored")
-            (@subcommand ls =>
-            	(about: "list all the files")
-            	(version: "0.1.0")
-            	(author: "nmbr_7")
-            )
             )
 (@subcommand faas =>
             (about: "subcommand to deploy your functions")
@@ -105,39 +93,171 @@ fn main() {
     .get_matches();
 
     match matches.subcommand() {
-        ("vm", Some(vm_matches)) => println!("Request you remote vm"),
         ("docker", Some(docker_matches)) => println!("Deploy your docker machine"),
         ("storage", Some(storage_matches)) => {
-            println!("Cbnb Storage at your service");
-            let fname = storage_matches.value_of("file").unwrap().to_string();
-            let mut file = File::open(&fname).unwrap();
-            let mut buf = Vec::new();
-            file.read_to_end(&mut buf).unwrap();
+            print!("\x1B[H\x1B[2J");
+            println!("Welcome to -- CBnB Storage -- shell");
+            let addr = matches.value_of("connect").unwrap();
+            fn sendfile(filename: String, addr: String) {
+                let mut file = File::open(&filename).unwrap();
+                let mut buf = Vec::new();
+                let filesize = file.metadata().unwrap().len();
+                file.read_to_end(&mut buf).unwrap();
 
-            let content = json!({
-                "filename" :  fname,
-                "content" : std::str::from_utf8(&buf).unwrap()})
-            .to_string();
+                let content = json!({
+                    "msg_type" :  "write",
+                    "filename" :  filename,
+                    "filesize" :  filesize,
+                })
+                .to_string();
 
-            let data = Message::Service(ServiceMessage {
-                msg_type: ServiceMsgType::SERVICEINIT,
-                service_type: ServiceType::Storage,
-                content: content,
-            });
-            let msg_data = serde_json::to_string(&data).unwrap();
-            //println!("{}",test["content"].as_str().unwrap(());
-            let addr = matches.value_of("connect");
-            let mut stream = TcpStream::connect(addr.unwrap()).unwrap();
-            stream.write_all(msg_data.as_bytes()).unwrap();
-            stream.flush().unwrap();
-            println!("Sent");
-            let mut buffer = [0; 512];
-            let no = stream.read(&mut buffer).unwrap();
-            let mut data = std::str::from_utf8(&buffer[0..no]).unwrap();
-            println!("Returned: {}", data);
-            match storage_matches.subcommand() {
-                ("ls", Some(ls)) => {}
-                (_, _) => {}
+                let data = Message::Service(ServiceMessage {
+                    msg_type: ServiceMsgType::SERVICEINIT,
+                    service_type: ServiceType::Storage,
+                    content: content,
+                });
+                let msg_data = serde_json::to_string(&data).unwrap();
+                //println!("{}",test["content"].as_str().unwrap(());
+
+                let mut resp = [0; 512];
+                let mut stream = TcpStream::connect(addr).unwrap();
+                println!("{:?}", msg_data);
+                stream.write_all(msg_data.as_bytes()).unwrap();
+                stream.flush().unwrap();
+                let no = stream.read(&mut resp).unwrap();
+
+                if std::str::from_utf8(&resp[0..no]).unwrap() == "OK" {
+                    stream.write_all(&buf).unwrap();
+                    stream.flush().unwrap();
+                    println!("Sent");
+                }
+                let mut buffer = [0; 512];
+                let no = stream.read(&mut buffer).unwrap();
+                let mut data = std::str::from_utf8(&buffer[0..no]).unwrap();
+                println!("Returned: {}", data);
+            }
+            fn getfile(filename: String, addr: String, id: String) {
+                let content = json!({
+                    "msg_type" :  "read",
+                    "filename" :  filename,
+                    "id"       :  id,
+                })
+                .to_string();
+
+                let data = Message::Service(ServiceMessage {
+                    msg_type: ServiceMsgType::SERVICEINIT,
+                    service_type: ServiceType::Storage,
+                    content: content,
+                });
+
+                let msg_data = serde_json::to_string(&data).unwrap();
+                //println!("{}",test["content"].as_str().unwrap(());
+
+                let mut resp = [0; 2048];
+                let mut destbuffer = [0 as u8; 2048];
+
+                let mut stream = TcpStream::connect(addr).unwrap();
+                //println!("{:?}", msg_data);
+                stream.write_all(msg_data.as_bytes()).unwrap();
+                stream.flush().unwrap();
+
+                let no = stream.read(&mut resp).unwrap();
+                let fsize: Value = serde_json::from_slice(&resp[0..no]).unwrap();
+                let filesize = fsize["total_size"].as_u64().unwrap() as usize;
+
+                let mut totalfilesize = 0 as usize;
+                loop {
+                    let no = stream.read(&mut resp).unwrap();
+                    //println!("val {}",std::str::from_utf8(&resp[0..no]).unwrap());
+                    let metadata: Value = serde_json::from_slice(&resp[0..no]).unwrap();
+                    //println!("{}",metadata);
+                    if metadata["msg_type"].as_str().unwrap() == "End" {
+                        break;
+                    }
+
+                    let size = metadata["size"].as_u64().unwrap() as usize;
+                    let index = metadata["index"].as_u64().unwrap();
+                    let mut total = 0 as usize;
+                    let mut bufvec: Vec<u8> = vec![];
+                    stream.write_all(String::from("OK").as_bytes()).unwrap();
+                    stream.flush().unwrap();
+                    loop {
+                        // ERROR hangs when size is 13664 so fetch the total file size first and if   \
+                        //       the size is less than 65536 before reaching the end request for ret- \
+                        //       ransmission
+                        let mut dno = stream.read(&mut destbuffer).unwrap();
+                        if dno > size {
+                            dno = size;
+                        }
+                        total += dno;
+                        bufvec.append(&mut destbuffer[0..dno].to_vec());
+                        //println!("Total: {} - dno: {} - Size {}",total,dno,size);
+                        if total == size {
+                            break;
+                        }
+                    }
+
+                    {
+                        use std::fs::OpenOptions;
+                        let mut file = OpenOptions::new()
+                            .write(true)
+                            .open("./storage.bin")
+                            .unwrap();
+                        //file.set_len(21312864).unwrap();
+                        let val = file.seek(SeekFrom::Start(index * 65536)).unwrap();
+                        //println!("seeked to offset {}",val);
+                        //let mut contents = vec![];
+                        //let mut handle = file.take(size)i;
+                        file.write_all(&bufvec.as_slice()).unwrap();
+                        file.flush().unwrap();
+                    }
+                    totalfilesize += total;
+                    if totalfilesize == filesize {
+                        break;
+                    }
+                }
+                println!(
+                    "File Download complete, Total File Size : {} bytes",
+                    totalfilesize
+                );
+            }
+
+            let coms: Vec<String> = vec!["ls", "upload", "download", "help", "exit"]
+                .into_iter()
+                .map(|a| a.to_string())
+                .collect::<Vec<String>>();
+            loop {
+                let mut line = String::new();
+                print!("CBnB > ");
+                std::io::stdout().flush().unwrap();
+                let b1 = std::io::stdin().read_line(&mut line).unwrap();
+                match line.as_str().trim() {
+                    "ls" => {
+                        let output = Command::new("ls")
+                            .output()
+                            .expect("Error Running the function");
+                        let response = std::str::from_utf8(&output.stdout).unwrap();
+                        println!("{}", response.replace("\n", " "));
+                    }
+                    "upload" => {
+                        sendfile("oldnew".to_string(), addr.to_string());
+                    }
+                    "download" => {
+                        getfile(
+                            "new".to_string(),
+                            addr.to_string(),
+                            "8e062117-b53a-43f3-ae37-850fb269ed31".to_string(),
+                        );
+                    }
+                    "clear" => {
+                        print!("\x1B[H\x1B[2J");
+                    }
+                    "help" => {
+                        println!(" --------------------------\n The Available Commands are:\n {}\n --------------------------- ",coms.join("\n "));
+                    }
+                    "exit" => break,
+                    _ => println!("Command not found: {}", line),
+                }
             }
         }
         ("faas", Some(faas_matches)) => {
