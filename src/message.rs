@@ -26,6 +26,7 @@ pub struct ServiceMessage {
     pub msg_type: ServiceMsgType,
     pub service_type: ServiceType,
     pub content: String,
+    pub uuid: String,
 }
 
 //////////////////////////////////////////////////////////
