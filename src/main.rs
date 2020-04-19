@@ -213,7 +213,7 @@ fn main() {
         (about: "CloudBnB Service CLI")
         (@arg connect: -c --connect +takes_value +required "destination addr and port")
         (@arg userid: -uid --userid +takes_value +required "user api key")
-(@subcommand docker =>
+(@subcommand paas =>
             (about: "Subcommand to deploy a  docker machines")
             (version: "0.1.0")
             (author: "nmbr_7")
@@ -261,7 +261,9 @@ fn main() {
     let addr = matches.value_of("connect").unwrap();
     let userid = matches.value_of("userid").unwrap().to_string();
     match matches.subcommand() {
-        ("docker", Some(docker_matches)) => println!("Deploy your docker machine"),
+        ("paas", Some(paas_matches)) => {
+            println!("Deploy your docker machine");
+        }
         ("storage", Some(storage_matches)) => {
             print!("\x1B[H\x1B[2J");
             println!("Welcome to -- CBnB Storage -- shell");
