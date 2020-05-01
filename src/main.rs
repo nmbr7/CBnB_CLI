@@ -9,14 +9,17 @@ use std::io::prelude::*;
 use std::io::SeekFrom;
 use std::net::TcpListener;
 use std::net::TcpStream;
+use std::path::Path;
 use std::process::Command;
 use walkdir::WalkDir;
 
+use chrono::{NaiveDateTime, Utc};
 mod message;
 
 use message::{Message, ServiceMessage, ServiceMsgType, ServiceType};
 fn sendfile(filename: String, addr: String, id: String) {
     let mut file = File::open(&filename).unwrap();
+    // TODO Take Chunks of data
     let mut buf = Vec::new();
     let filesize = file.metadata().unwrap().len();
     file.read_to_end(&mut buf).unwrap();
@@ -24,7 +27,7 @@ fn sendfile(filename: String, addr: String, id: String) {
     let content = json!({
         "id"       : id,
         "msg_type" :  "write",
-        "filename" :  filename,
+        "filename" :  filename.split('/').collect::<Vec<&str>>().last(),
         "filesize" :  filesize,
     })
     .to_string();
@@ -217,7 +220,13 @@ fn main() {
             (about: "Subcommand to deploy a  docker machines")
             (version: "0.1.0")
             (author: "nmbr_7")
+            (@subcommand deploy =>
+            	(about: "deploy the app")
+            	(version: "0.1.0")
+            	(author: "nmbr_7")
+             (@arg runtime: -rt --runtime +required +takes_value "app runtime language")
         )
+            )
 (@subcommand storage =>
             (about: "Subcommand to use Cbnb storage solutions")
             (version: "0.1.0")
@@ -262,7 +271,58 @@ fn main() {
     let userid = matches.value_of("userid").unwrap().to_string();
     match matches.subcommand() {
         ("paas", Some(paas_matches)) => {
-            println!("Deploy your docker machine");
+            let mut stream = TcpStream::connect(addr).unwrap();
+
+            let msg_data = match paas_matches.subcommand() {
+                ("deploy", Some(deploy_matches)) => {
+                    if !Path::new("./app.toml").exists() {
+                        println!("Error: app.toml file not found");
+                        return;
+                    }
+                    let runtime = deploy_matches.value_of("runtime").unwrap().to_string();
+                    //let parse_from_str = NaiveDateTime::parse_from_str;
+                    //let a = parse_from_str(&utc, "%s").unwrap();
+                    //let timestamp = Utc::now().timestamp().to_string(); 
+                    
+                    let content = json!({
+                        "msg_type": "deploy",
+                        "runtime":runtime,
+                    })
+                    .to_string();
+
+                    let data = Message::Service(ServiceMessage {
+                        msg_type: ServiceMsgType::SERVICEINIT,
+                        service_type: ServiceType::Paas,
+                        content: content,
+                        uuid: userid.clone(),
+                    });
+                    let msg = serde_json::to_string(&data).unwrap();
+                    stream.write_all(msg.as_bytes()).unwrap();
+                    stream.flush().unwrap();
+                    let mut buffer = [0; 512];
+                    let no = stream.read(&mut buffer).unwrap();
+                    
+                    let mut data: Value = serde_json::from_slice(&buffer[0..no]).unwrap();
+                   
+                    let fname = data["filename"].as_str().unwrap().to_string();
+                    let fname = format!("/tmp/{}",fname);
+                    let output = Command::new("zip")
+                        .args(&["-r", &fname, ".", "-x", "target*", ".git*"])
+                        .output()
+                        .expect("Failed to compress the file, Check whether zip is installed");
+                  
+                    // Upload the app directory to the server
+                    sendfile(fname.to_string(), addr.to_string(), userid.clone());
+                    stream.write_all(json!({
+                        "UploadStatus":"OK"
+                    }).to_string().as_bytes()).unwrap();
+                    stream.flush().unwrap();
+                    let no = stream.read(&mut buffer).unwrap();
+                    let data = std::str::from_utf8(&buffer[0..no]).unwrap();
+                    println!("{}",data);
+                }
+                _ => return,
+            };
         }
         ("storage", Some(storage_matches)) => {
             print!("\x1B[H\x1B[2J");
@@ -336,6 +396,8 @@ fn main() {
                     let prototype = create_matches.value_of("prototype").unwrap().to_string();
                     let dir = create_matches.value_of("dir").unwrap().to_string();
                     let djson = dirjson(dir);
+
+                    // TODO Reimplement the json construction
                     let content = format!("{{ \"msg_type\": \"MANAGE\" , \"action\": \"create\",\"lang\": {:?}, \"prototype\": {:?}, {} }}",lang, prototype, djson);
                     //TEST
 
