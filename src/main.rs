@@ -2,8 +2,8 @@
 extern crate clap;
 extern crate walkdir;
 
-use native_tls::TlsConnector;
 use indicatif::{ProgressBar, ProgressStyle};
+use native_tls::TlsConnector;
 use serde_json::{json, Value};
 use std::collections::HashMap;
 use std::fs::File;
@@ -44,13 +44,13 @@ fn sendfile(filename: String, addr: String, id: String) {
     //println!("{}",test["content"].as_str().unwrap(());
 
     let mut resp = [0; 512];
-    
-    let mut stream = TcpStream::connect(&addr).unwrap();
-    /*
+
+//    let mut stream = TcpStream::connect(&addr).unwrap();
+//    /*
     let connector = TlsConnector::new().unwrap();
     let stream = TcpStream::connect(&addr).unwrap();
     let mut stream = connector.connect(&addr.split(":").collect::<Vec<&str>>()[0], stream).unwrap();
-    */
+//    */
 
     //println!("{:?}", msg_data);
     stream.write_all(msg_data.as_bytes()).unwrap();
@@ -89,12 +89,12 @@ pub fn getfile(filename: String, addr: String, id: String, dest: &String) {
     let mut resp = [0; 2048];
     let mut destbuffer = [0 as u8; 2048];
 
-    let mut stream = TcpStream::connect(addr).unwrap();
-    /*
+//    let mut stream = TcpStream::connect(addr).unwrap();
+//    /*
     let connector = TlsConnector::new().unwrap();
     let stream = TcpStream::connect(&addr).unwrap();
     let mut stream = connector.connect(&addr.split(":").collect::<Vec<&str>>()[0], stream).unwrap();
-    */
+//    */
 
     //println!("{:?}", msg_data);
     stream.write_all(msg_data.as_bytes()).unwrap();
@@ -141,9 +141,9 @@ pub fn getfile(filename: String, addr: String, id: String, dest: &String) {
             //println!("{:?}",destbuffer[(dno-15)..dno].to_vec());
             bufvec.append(&mut destbuffer[0..dno].to_vec());
             if total >= size {
-            //println!("Total: {} - dno: {} - Size {}",total,dno,size);
-            stream.write_all(String::from("OK").as_bytes()).unwrap();
-            stream.flush().unwrap();
+                //println!("Total: {} - dno: {} - Size {}",total,dno,size);
+                stream.write_all(String::from("OK").as_bytes()).unwrap();
+                stream.flush().unwrap();
                 break;
             }
         }
@@ -173,7 +173,7 @@ pub fn getfile(filename: String, addr: String, id: String, dest: &String) {
         }
     }
 
-pb.finish_with_message("downloaded");
+    pb.finish_with_message("downloaded");
     println!(
         "File Download complete, Total File Size : {} bytes",
         totalfilesize
@@ -287,13 +287,13 @@ fn query(query: String, addr: String, id: String) {
 
     let mut resp = [0; 2048];
 
-    let mut stream = TcpStream::connect(addr).unwrap();
-    
-    /*
+//    let mut stream = TcpStream::connect(addr).unwrap();
+
+//    /*
     let connector = TlsConnector::new().unwrap();
     let stream = TcpStream::connect(&addr).unwrap();
     let mut stream = connector.connect(&addr.split(":").collect::<Vec<&str>>()[0], stream).unwrap();
-    */
+//    */
 
     //println!("{:?}", msg_data);
     stream.write_all(msg_data.as_bytes()).unwrap();
@@ -399,12 +399,12 @@ fn main() {
     let userid = matches.value_of("userid").unwrap().to_string();
     match matches.subcommand() {
         ("paas", Some(paas_matches)) => {
-    let mut stream = TcpStream::connect(addr).unwrap();
-    /*
-    let connector = TlsConnector::new().unwrap();
-    let stream = TcpStream::connect(addr).unwrap();
-    let mut stream = connector.connect(addr, stream).unwrap();
-    */
+           // let mut stream = TcpStream::connect(addr).unwrap();
+           // /*
+            let connector = TlsConnector::new().unwrap();
+            let stream = TcpStream::connect(addr).unwrap();
+            let mut stream = connector.connect(addr, stream).unwrap();
+           // */
             let msg_data = match paas_matches.subcommand() {
                 ("deploy", Some(deploy_matches)) => {
                     if !Path::new("./app.toml").exists() {
@@ -507,7 +507,12 @@ fn main() {
                     }
                     ["download"] => match [args[1]] {
                         [filename] => {
-                            getfile(filename.to_string(), addr.to_string(), userid.clone(), &filename.to_string());
+                            getfile(
+                                filename.to_string(),
+                                addr.to_string(),
+                                userid.clone(),
+                                &filename.to_string(),
+                            );
                         }
                         _ => println!("Please specify a filename to download"),
                     },
@@ -527,12 +532,12 @@ fn main() {
             println!("client");
             let addr = matches.value_of("connect").unwrap();
 
-            let mut stream = TcpStream::connect(addr).unwrap();
-            /*
-            let connector = TlsConnector::new().unwrap();
-            let stream = TcpStream::connect(addr).unwrap();
-            let mut stream = connector.connect(addr, stream).unwrap();
-*/
+          //  let mut stream = TcpStream::connect(addr).unwrap();
+          //  /*
+                        let connector = TlsConnector::new().unwrap();
+                        let stream = TcpStream::connect(addr).unwrap();
+                        let mut stream = connector.connect(addr, stream).unwrap();
+          //  */
             let msg_data = match faas_matches.subcommand() {
                 ("create", Some(create_matches)) => {
                     let lang = create_matches.value_of("lang").unwrap().to_string();

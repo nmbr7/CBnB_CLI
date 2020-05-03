@@ -12,3 +12,5 @@ serde_json = { version = "1.0" }
 clap = "2.33.0"
 walkdir = "*"
 chrono = "*"
+native-tls = "*"
+indicatif = {version = "*", features = ["with_rayon"]}
