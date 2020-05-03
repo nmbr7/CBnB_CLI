@@ -45,12 +45,12 @@ fn sendfile(filename: String, addr: String, id: String) {
 
     let mut resp = [0; 512];
 
-//    let mut stream = TcpStream::connect(&addr).unwrap();
-//    /*
+    let mut stream = TcpStream::connect(&addr).unwrap();
+    /*
     let connector = TlsConnector::new().unwrap();
     let stream = TcpStream::connect(&addr).unwrap();
     let mut stream = connector.connect(&addr.split(":").collect::<Vec<&str>>()[0], stream).unwrap();
-//    */
+    */
 
     //println!("{:?}", msg_data);
     stream.write_all(msg_data.as_bytes()).unwrap();
@@ -89,12 +89,12 @@ pub fn getfile(filename: String, addr: String, id: String, dest: &String) {
     let mut resp = [0; 2048];
     let mut destbuffer = [0 as u8; 2048];
 
-//    let mut stream = TcpStream::connect(addr).unwrap();
-//    /*
+    let mut stream = TcpStream::connect(addr).unwrap();
+    /*
     let connector = TlsConnector::new().unwrap();
     let stream = TcpStream::connect(&addr).unwrap();
     let mut stream = connector.connect(&addr.split(":").collect::<Vec<&str>>()[0], stream).unwrap();
-//    */
+    */
 
     //println!("{:?}", msg_data);
     stream.write_all(msg_data.as_bytes()).unwrap();
@@ -287,13 +287,13 @@ fn query(query: String, addr: String, id: String) {
 
     let mut resp = [0; 2048];
 
-//    let mut stream = TcpStream::connect(addr).unwrap();
+    let mut stream = TcpStream::connect(addr).unwrap();
 
-//    /*
+    /*
     let connector = TlsConnector::new().unwrap();
     let stream = TcpStream::connect(&addr).unwrap();
     let mut stream = connector.connect(&addr.split(":").collect::<Vec<&str>>()[0], stream).unwrap();
-//    */
+    */
 
     //println!("{:?}", msg_data);
     stream.write_all(msg_data.as_bytes()).unwrap();
@@ -399,12 +399,12 @@ fn main() {
     let userid = matches.value_of("userid").unwrap().to_string();
     match matches.subcommand() {
         ("paas", Some(paas_matches)) => {
-           // let mut stream = TcpStream::connect(addr).unwrap();
-           // /*
+            let mut stream = TcpStream::connect(addr).unwrap();
+            /*
             let connector = TlsConnector::new().unwrap();
             let stream = TcpStream::connect(addr).unwrap();
             let mut stream = connector.connect(addr, stream).unwrap();
-           // */
+            */
             let msg_data = match paas_matches.subcommand() {
                 ("deploy", Some(deploy_matches)) => {
                     if !Path::new("./app.toml").exists() {
@@ -532,12 +532,12 @@ fn main() {
             println!("client");
             let addr = matches.value_of("connect").unwrap();
 
-          //  let mut stream = TcpStream::connect(addr).unwrap();
-          //  /*
+            let mut stream = TcpStream::connect(addr).unwrap();
+            /*
                         let connector = TlsConnector::new().unwrap();
                         let stream = TcpStream::connect(addr).unwrap();
                         let mut stream = connector.connect(addr, stream).unwrap();
-          //  */
+            */
             let msg_data = match faas_matches.subcommand() {
                 ("create", Some(create_matches)) => {
                     let lang = create_matches.value_of("lang").unwrap().to_string();
