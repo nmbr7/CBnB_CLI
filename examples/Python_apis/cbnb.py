@@ -9,7 +9,7 @@ class cfaas(object):
         self.faasid = faasid
 
     def call(self,*params):
-        url = 'http://faas.cbnb.com:7779/invoke'
+        url = 'http://faas.cbnb.com:7770/invoke'
         payload = {'faas_uuid': self.faasid, 'uuid':self.uuid,'params': [str(i) for i in params]}
         headers = {'content-type': 'application/json'}
         r = requests.post(url, data=json.dumps(payload), headers=headers)
@@ -21,7 +21,7 @@ class ckvstore(object):
         self.uuid = uuid
 
     def get(self,key):
-        url = 'http://kv.cbnb.com:7779/'+key
+        url = 'http://kv.cbnb.com:7770/'+key
         payload = {'id':self.uuid}
         headers = {'content-type': 'application/json'}
         r = requests.post(url, data=json.dumps(payload), headers=headers)
@@ -29,7 +29,7 @@ class ckvstore(object):
         return r.text
 
     def set(self,kv):
-        url = 'http://kv.cbnb.com:7779'
+        url = 'http://kv.cbnb.com:7770'
         payload = {'kv': {list(kv.keys())[0] : list(kv.values())[0]}, 'id':self.uuid}
         headers = {'content-type': 'application/json'}
         r = requests.put(url, data=json.dumps(payload), headers=headers)

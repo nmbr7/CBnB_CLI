@@ -63,13 +63,13 @@ fn sendfile(filename: String, addr: String, id: String) {
     let no = stream.read(&mut resp).unwrap();
 
     if std::str::from_utf8(&resp[0..no]).unwrap() == "OK" {
-    for i in buf{
-        bufstream.write(&[i]).unwrap();
-    }
-    bufstream.flush().unwrap();
-    
-   // stream.write_all(&buf).unwrap();
-   //     stream.flush().unwrap();
+        for i in buf {
+            bufstream.write(&[i]).unwrap();
+        }
+        bufstream.flush().unwrap();
+
+        // stream.write_all(&buf).unwrap();
+        //     stream.flush().unwrap();
         println!("Sent Successfull");
     }
     let mut buffer = [0; 512];
@@ -140,24 +140,15 @@ pub fn getfile(filename: String, addr: String, id: String, dest: &String) {
         let mut bufvec: Vec<u8> = vec![];
         let mut destbuffer: Vec<u8> = vec![];
         loop {
-            // ERROR hangs when size is 13664 so fetch the total file size first and if   \
-            //       the size is less than 65536 before reaching the end request for ret- \
-            //       ransmission
             //let mut dno = stream.read_to_end(&mut destbuffer).unwrap();
             for byte in stream.try_clone().unwrap().bytes() {
-                total +=1;
+                total += 1;
                 destbuffer.push(byte.unwrap());
-                if total >= size{
+                if total >= size {
                     break;
                 }
-             }
-            /*if dno > size {
-                dno = size;
-            }*/
+            }
             bufvec.append(&mut destbuffer[0..total].to_vec());
-            
-            //println!("First 10 Bytes {:?}",bufvec[0..10].to_vec());
-            //println!("Last  10 Bytes {:?}",bufvec[total-10..total].to_vec());
             //println!("Total: {} - Size {}",total,size);
             if total >= size {
                 stream.write_all(String::from("OK").as_bytes()).unwrap();
@@ -165,7 +156,6 @@ pub fn getfile(filename: String, addr: String, id: String, dest: &String) {
                 break;
             }
         }
-
         totalfilesize += total;
         pb.set_position(totalfilesize as u64);
         {
@@ -175,36 +165,19 @@ pub fn getfile(filename: String, addr: String, id: String, dest: &String) {
                 .write(true)
                 .open(dest.clone())
                 .unwrap();
-            //file.set_len(21312864).unwrap();
             let val = file.seek(SeekFrom::Start(index * 4046848)).unwrap();
             //println!("seeked to offset {}",val);
             //let mut contents = vec![];
             //let mut handle = file.take(size)i;
-            let mut a = 0;
-          //  println!("Total: {}\nFilsesize: {}\nTotalfilesofar: {}\nBuflen: {}",total,filesize,totalfilesize,bufvec.len());
-        /*    if totalfilesize >= filesize {
-            let val = file.seek(SeekFrom::Start(index * 4046848)).unwrap();
-                let a = totalfilesize-filesize;
-                file.write_all(&bufvec.as_slice()[0..filesize]).unwrap();
-                file.flush().unwrap();
-                break;
-            }
-         *///   else{
             file.write_all(&bufvec.as_slice()).unwrap();
             file.flush().unwrap();
-        //    }
         }
-
-
         //println!("val {:?}",std::str::from_utf8(&resp[0..no]).unwrap());
         if totalfilesize >= filesize {
-            println!("Total filesize downloaded : {}",totalfilesize );
+            println!("Total filesize downloaded : {}", totalfilesize);
             break;
         }
-
-        
     }
-
     pb.finish_with_message("downloaded");
     println!(
         "File Download complete, Total File Size : {} bytes",
@@ -470,6 +443,7 @@ fn main() {
 
                     let fname = data["filename"].as_str().unwrap().to_string();
                     let fname = format!("/tmp/{}", fname);
+                    println!("Writing to zip file at {}", fname);
                     let output = Command::new("zip")
                         .args(&["-r", &fname, ".", "-x", "target*", ".git*"])
                         .output()

@@ -1,7 +1,9 @@
 from cbnb import cfaas
 from cbnb import ckvstore
 
-USER_ID = '1234567890'
+import random as r
+
+USER_ID = '123dfasdfasd4567890'
 #FAAS_ID = 'e606a8bd-126e-4e6a-b2e7-0dcf758ce608'
 
 #./cbnbcli  -c cbnb.com:7779 --userid 12312 storage
@@ -15,6 +17,7 @@ for i in range(0,10):
 """
 
 kv = ckvstore(USER_ID)
-print(kv.set({'username':"suhailrafeeq"}))
-print(kv.get('username'))
 
+for i in 'dsfvbhjtyhr34567ikjhnb':
+    print(kv.set({'username'+i:i*r.randint(100,1000)}))
+    print(kv.get('username'+i))
